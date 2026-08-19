@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     app_env: str = "development"
     log_level: str = "INFO"
+    groq_api_key: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
