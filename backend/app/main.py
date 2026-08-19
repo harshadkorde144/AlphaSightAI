@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from backend.app.core.config import settings
-
+from backend.app.data_pipeline.fetchers.bitcoin_fetcher import get_bitcoin_price
 
 app = FastAPI(
     title=settings.app_name,
@@ -25,3 +25,6 @@ async def health():
     return {
         "status": "healthy"
     }
+@app.get("/api/v1/market/bitcoin/price")
+async def bitcoin_price():
+    return await get_bitcoin_price()
