@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from backend.app.schemas.market import BitcoinMarketData
 from backend.app.core.config import settings
 from backend.app.data_pipeline.fetchers.bitcoin_fetcher import get_bitcoin_price
+from fastapi import FastAPI, HTTPException
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -34,4 +36,10 @@ async def bitcoin_price():
     response_model=BitcoinMarketData,
 )
 async def bitcoin_price():
-    return await get_bitcoin_price()
+    try:
+        return await get_bitcoin_price()
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
