@@ -1,10 +1,12 @@
 import httpx
 
+from backend.app.schemas.market import BitcoinMarketData
+
 
 COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
 
 
-async def get_bitcoin_price() -> dict:
+async def get_bitcoin_price() -> BitcoinMarketData:
     params = {
         "ids": "bitcoin",
         "vs_currencies": "usd,inr",
@@ -21,11 +23,11 @@ async def get_bitcoin_price() -> dict:
 
     bitcoin = data["bitcoin"]
 
-    return {
-        "symbol": "BTC",
-        "price_usd": bitcoin.get("usd"),
-        "price_inr": bitcoin.get("inr"),
-        "change_24h_percent": bitcoin.get("usd_24h_change"),
-        "volume_24h_usd": bitcoin.get("usd_24h_vol"),
-        "market_cap_usd": bitcoin.get("usd_market_cap"),
-    }
+    return BitcoinMarketData(
+        symbol="BTC",
+        price_usd=bitcoin["usd"],
+        price_inr=bitcoin["inr"],
+        change_24h_percent=bitcoin["usd_24h_change"],
+        volume_24h_usd=bitcoin["usd_24h_vol"],
+        market_cap_usd=bitcoin["usd_market_cap"],
+    )
