@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     groq_api_key: str
+    groq_model: str = "openai/gpt-oss-120b"
 
     model_config = SettingsConfigDict(
         env_file=".env",
