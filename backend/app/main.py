@@ -1,8 +1,10 @@
-from fastapi import FastAPI
-from backend.app.schemas.market import BitcoinMarketData
+from fastapi import FastAPI, HTTPException
+
 from backend.app.core.config import settings
 from backend.app.data_pipeline.fetchers.bitcoin_fetcher import get_bitcoin_price
-from fastapi import FastAPI, HTTPException
+from backend.app.schemas.bitcoin_qa import BitcoinAnswer, BitcoinQuestion
+from backend.app.schemas.market import BitcoinMarketData
+from backend.app.services.llm_service import answer_bitcoin_question
 
 
 app = FastAPI(
@@ -24,12 +26,8 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "healthy"
-    }
-@app.get("/api/v1/market/bitcoin/price")
-async def bitcoin_price():
-    return await get_bitcoin_price()
+    return {"status": "healthy"}
+
 
 @app.get(
     "/api/v1/market/bitcoin/price",
@@ -39,7 +37,32 @@ async def bitcoin_price():
     try:
         return await get_bitcoin_price()
     except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post(
+    "/api/v1/bitcoin/ask",
+    response_model=BitcoinAnswer,
+)
+async def ask_bitcoin_question(payload: BitcoinQuestion):
+    try:
+        market_data = await get_bitcoin_price()
+    except RuntimeError as exc:
         raise HTTPException(
             status_code=503,
-            detail=str(exc),
+            detail=f"Unable to fetch current Bitcoin market data: {exc}",
         ) from exc
+
+    try:
+        answer = await answer_bitcoin_question(payload.question, market_data)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Bitcoin analysis service is temporarily unavailable",
+        ) from exc
+
+    return BitcoinAnswer(
+        question=payload.question,
+        answer=answer,
+        market_data=market_data.model_dump(),
+    )
