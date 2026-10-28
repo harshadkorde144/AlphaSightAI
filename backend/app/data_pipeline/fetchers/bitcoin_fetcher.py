@@ -1,3 +1,5 @@
+import json
+
 import httpx
 
 from backend.app.schemas.market import BitcoinMarketData
@@ -41,7 +43,7 @@ async def get_bitcoin_price() -> BitcoinMarketData:
             f"Bitcoin market API returned HTTP {exc.response.status_code}"
         ) from exc
 
-    except (KeyError, TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         raise RuntimeError("Invalid Bitcoin market data received") from exc
 
     except httpx.RequestError as exc:
