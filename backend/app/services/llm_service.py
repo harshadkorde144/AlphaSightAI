@@ -49,8 +49,12 @@ async def answer_bitcoin_question(
     except Exception as exc:
         raise RuntimeError("The LLM provider could not complete the request") from exc
 
-    answer = response.choices[0].message.content
-    if not answer or not answer.strip():
+    try:
+        answer = response.choices[0].message.content
+    except (AttributeError, IndexError, TypeError) as exc:
+        raise RuntimeError("The LLM provider returned an invalid response") from exc
+
+    if not isinstance(answer, str) or not answer.strip():
         raise RuntimeError("The LLM provider returned an empty answer")
 
     return answer.strip()
