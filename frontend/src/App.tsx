@@ -2,19 +2,25 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import "./App.css";
 
 type Market = "India" | "Forex" | "Crypto";
-type Page = "Overview" | "Markets" | "Watchlist" | "Analytics" | "AI Research" | "RAG Pipeline" | "API Explorer";
+type Page = "Overview" | "Markets" | "Watchlist" | "Analytics" | "News" | "AI Research" | "RAG Pipeline" | "API Explorer";
 type CryptoQuote = { symbol: string; name: string; price_usd: number; price_inr: number; change_24h_percent: number | null; volume_24h_usd: number | null; market_cap_usd: number | null };
 type MarketQuote = { symbol: string; name: string; price: number; as_of: string; change_percent: number; source: string; data_type: string };
 type Point = { timestamp: number; value: number; date?: string };
 type ResearchResult = { source?: string; text?: string; chunk_number?: number; distance?: number };
 
 const API = "http://127.0.0.1:8000";
+type NewsItem = { title: string; link: string; published?: string | null; source?: string | null };
+const NEWS_TABS: [string, string][] = [
+  ["market", "Market"], ["ipo", "IPO"], ["trading", "Trading"], ["business", "Business"],
+  ["global", "Global"], ["commodities", "Commodities"], ["india", "India"], ["forex", "Forex"], ["crypto", "Crypto"],
+];
 const PERIODS = ["1D", "1W", "1M", "1Y"] as const;
 const NAV: { label: Page; icon: string; group: string }[] = [
   { label: "Overview", icon: "▦", group: "WORKSPACE" },
   { label: "Markets", icon: "⌁", group: "WORKSPACE" },
   { label: "Watchlist", icon: "☆", group: "WORKSPACE" },
   { label: "Analytics", icon: "▥", group: "INTELLIGENCE" },
+  { label: "News", icon: "▤", group: "INTELLIGENCE" },
   { label: "AI Research", icon: "✳", group: "INTELLIGENCE" },
   { label: "RAG Pipeline", icon: "◈", group: "SYSTEM" },
   { label: "API Explorer", icon: "⌘", group: "SYSTEM" },
@@ -67,6 +73,29 @@ function App() {
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchError, setResearchError] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [newsCat, setNewsCat] = useState("market");
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState("");
+
+  useEffect(() => {
+    if (page !== "News") return;
+    let alive = true;
+    const load = async () => {
+      setNewsLoading(true); setNewsError("");
+      try {
+       const response = await fetch(API + "/api/v1/news/" + newsCat);
+        if (!response.ok) throw new Error("News API returned " + response.status);
+        const data = await response.json();
+        if (alive) setNews(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (alive) { setNews([]); setNewsError(err instanceof Error ? err.message : "Unable to load news"); }
+      } finally { if (alive) setNewsLoading(false); }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 60_000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [page, newsCat]);
 
   const loadMarkets = useCallback(async () => {
     const jobs = [
@@ -237,7 +266,15 @@ function App() {
         {page === "RAG Pipeline" && <><section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-dot" /> SYSTEM INTELLIGENCE</div><h1>RAG pipeline<span className="heading-period">.</span></h1><p>Retrieval-augmented generation workflow and current implementation map.</p></div></section><div className="panel pipeline-panel"><div className="pipeline-step"><span className="pipeline-number">01</span><div><b>Research query</b><p>User submits a financial question or semantic search query.</p></div><span className="state-chip">INPUT</span></div><div className="pipeline-connector" /><div className="pipeline-step"><span className="pipeline-number">02</span><div><b>Retrieval API</b><p><code>POST /api/v1/research/search</code> requests relevant indexed chunks.</p></div><span className="state-chip">API</span></div><div className="pipeline-connector" /><div className="pipeline-step"><span className="pipeline-number">03</span><div><b>Context ranking</b><p>Returned source, chunk number and distance are shown when supplied by the backend.</p></div><span className="state-chip">VERIFY</span></div><div className="pipeline-connector" /><div className="pipeline-step"><span className="pipeline-number">04</span><div><b>LLM response</b><p>Configured Q&amp;A endpoint generates an answer. Validate source grounding and quality with tests.</p></div><span className="state-chip">API</span></div></div><div className="panel table-panel"><div className="section-kicker">IMPLEMENTATION NOTE</div><h2>Pipeline status</h2><p className="panel-copy">This page documents the current UI integration points; it does not claim that each internal retrieval or agent stage has been independently verified.</p><button className="button-primary" onClick={() => setPage("AI Research")}>Test research endpoints ↗</button></div></>}
 
         {page === "API Explorer" && <><section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-dot" /> DEVELOPER TOOLS</div><h1>API explorer<span className="heading-period">.</span></h1><p>Endpoints used by the frontend integration.</p></div><span className={`api-health ${apiStatus}`}>● {statusText}</span></section><div className="panel table-panel"><div className="panel-top"><div><div className="section-kicker">CONNECTED ROUTES</div><h2>API reference</h2></div><span className="muted-inline">{ROUTES.length} routes</span></div>{ROUTES.map(([method, path, description]) => <div className="api-route" key={path}><span className={`method-pill ${method.toLowerCase()}`}>{method}</span><code>{path}</code><span>{description}</span><button title="Copy endpoint path" onClick={() => void navigator.clipboard?.writeText(path)}>Copy</button></div>)}<p className="panel-note">Endpoint availability depends on the FastAPI backend running at {API} and the configured Vite/API setup.</p></div></>}
-
+{page === "News" && <><section className="page-heading"><div><div className="eyebrow"><span className="eyebrow-dot" /> LIVE HEADLINES</div><h1>Market news<span className="heading-period">.</span></h1><p>Latest IPOs, stocks, trading and global market headlines.</p></div><span className="date-stamp">Auto refresh · 60 sec</span></section>
+          <div className="news-tabs">{NEWS_TABS.map(([key, label]) => <button key={key} className={newsCat === key ? "active" : ""} onClick={() => setNewsCat(key)}>{label}</button>)}</div>
+          <div className="panel news-panel">
+            {newsLoading && !news.length && <div className="chart-message"><span className="loader" /> Loading headlines…</div>}
+            {newsError && <div className="inline-error">{newsError}</div>}
+            {!newsLoading && !newsError && !news.length && <div className="empty-state">No headlines found for this category.</div>}
+            {news.map((n, i) => <a className="news-item" key={i} href={n.link} target="_blank" rel="noreferrer"><span className="news-title">{n.title}</span><span className="news-meta"><b>{n.source ?? "News"}</b>{n.published ? " · " + new Date(n.published).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}<span className="news-read">Read ↗</span></span></a>)}
+          </div>
+          <p className="panel-note">Headlines are from public RSS feeds. For information only, not investment advice.</p></>}
         <footer className="app-footer"><span>ALPHASIGHTAI <i>•</i> MARKET INTELLIGENCE WORKSPACE</span><span>Values reflect configured feeds · For research only</span></footer>
       </div>
     </main>

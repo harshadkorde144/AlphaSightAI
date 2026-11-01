@@ -36,6 +36,8 @@ from backend.app.schemas.research import (
     ResearchSearchResponse,
 )
 from rag.vector_store import search_knowledge_base
+from fastapi import HTTPException
+from backend.app.services.news_service import FEEDS, get_news
 
 
 # ==========================================
@@ -114,6 +116,15 @@ async def health_check():
         "version": settings.app_version,
     }
 
+# ============================================
+# NEWS
+# ============================================
+
+@app.get("/api/v1/news/{category}")
+def news(category: str):
+    if category not in FEEDS:
+        raise HTTPException(status_code=404, detail="Unknown category")
+    return get_news(category)
 
 # ==========================================
 # BITCOIN MARKET
