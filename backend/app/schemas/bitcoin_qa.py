@@ -1,4 +1,5 @@
-from pydantic import BaseModel, ConfigDict, Field
+
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class BitcoinQuestion(BaseModel):
@@ -6,12 +7,16 @@ class BitcoinQuestion(BaseModel):
 
     question: str = Field(
         min_length=3,
-        max_length=1000,
-        description="A question about Bitcoin or its current market data.",
+        max_length=2000,
+        description="Question about Bitcoin and cryptocurrency markets",
     )
 
 
 class BitcoinAnswer(BaseModel):
     question: str
+
+    market_data: dict = Field(
+        default_factory=dict
+    )
+
     answer: str
-    market_data: dict[str, str | float]

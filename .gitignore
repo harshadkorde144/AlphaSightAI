@@ -42,3 +42,21 @@ data/vectorstore/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/vectorstore/.gitkeep
+# Model weights and downloaded model caches
+data/models/
+rag/data/models/
+data/knowledge_base/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temporary patches and backups
+*.patch
+*.mbox.patch
+*.backup*
+frontend-backup-before-polish/
+
+# Temporary files
+New Text Document.txt
+tatus

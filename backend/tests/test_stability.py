@@ -194,3 +194,67 @@ def test_question_length_boundaries(monkeypatch):
         assert r.status_code == code, (len(q), r.status_code)
     # whitespace is stripped before the length check
     assert client.post("/api/v1/bitcoin/ask", json={"question": " " * 5 + "x" * 1000 + " " * 5}).status_code == 200
+
+def test_llm_includes_retrieved_research_in_groq_request(monkeypatch):
+    captured = {}
+
+    def fake_search(query, top_k=3):
+        return [{
+            "source": "sample_research.txt",
+            "text": "Bitcoin price can be affected by demand and investor sentiment.",
+            "chunk_number": 0,
+            "distance": 0.2,
+            "id": "sample_research.txt::chunk::0",
+        }]
+
+    class FakeCompletions:
+        async def create(self, **kwargs):
+            captured.update(kwargs)
+            return _resp("Demand and investor sentiment can affect Bitcoin's price.")
+
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=FakeCompletions())
+    )
+
+    monkeypatch.setattr(llm_service, "search_knowledge_base", fake_search)
+    monkeypatch.setattr(llm_service, "_client", fake_client)
+
+    answer = asyncio.run(
+        llm_service.answer_bitcoin_question(
+            "What affects Bitcoin's price?", SAMPLE
+        )
+    )
+
+    assert "investor sentiment" in answer
+    user_message = captured["messages"][1]["content"]
+    assert "sample_research.txt" in user_message
+    assert "Latest market snapshot (JSON)" in user_message
+
+
+def test_llm_continues_when_rag_retrieval_fails(monkeypatch):
+    def failed_search(query, top_k=3):
+        raise RuntimeError("ChromaDB unavailable")
+
+    class FakeCompletions:
+        async def create(self, **kwargs):
+            self.messages = kwargs["messages"]
+            return _resp("Bitcoin market snapshot received.")
+
+    completions = FakeCompletions()
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=completions)
+    )
+
+    monkeypatch.setattr(llm_service, "search_knowledge_base", failed_search)
+    monkeypatch.setattr(llm_service, "_client", fake_client)
+
+    answer = asyncio.run(
+        llm_service.answer_bitcoin_question(
+            "What affects Bitcoin's price?", SAMPLE
+        )
+    )
+
+    assert answer == "Bitcoin market snapshot received."
+    user_message = completions.messages[1]["content"]
+    assert "Latest market snapshot (JSON)" in user_message
+    assert "No relevant research documents were retrieved." in user_message

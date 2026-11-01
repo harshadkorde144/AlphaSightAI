@@ -1,0 +1,20 @@
+Bitcoin Market Research
+
+Bitcoin's price is affected by supply and demand, investor sentiment,
+macroeconomic conditions, interest rates, liquidity, and regulatory news.
+
+Bitcoin has a limited maximum supply of 21 million coins. Changes in demand
+can affect its market price, but limited supply does not guarantee price increases.
+
+Institutional investment, exchange-traded funds, exchange liquidity, and
+large transactions can influence short-term market movements.
+
+Higher interest rates may reduce demand for riskier assets, while expectations
+of lower interest rates can improve risk appetite. These relationships are
+not guaranteed and depend on broader market conditions.
+
+Regulatory announcements, security incidents, exchange failures, and changes
+in market sentiment can cause substantial volatility.
+
+Historical performance does not guarantee future returns. This document is
+for educational research and is not financial advice.
